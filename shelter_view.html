@@ -1,0 +1,77 @@
+<html>
+	<head>
+		<style type="text/css">
+			#map-container
+			{
+				width: 500px;
+				height: 500px;
+			}
+		</style>
+		<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+		<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBMU7wa58cLNCw0YLR9IpY5L1rf3QzHZsU&callback=mapAPILoaded"
+        async defer></script>
+		<script type="text/javascript">
+			function mapAPILoaded()
+			{
+				$(function(){
+					var centerCoords = {'lat': 41.2, 'lng': -74.4};
+					
+					$.get('backend/get_shelters.php', {'latitude': centerCoords.lat, 'longitude': centerCoords.lng}, function(resultData) {
+						var shelterMap = new google.maps.Map(document.getElementById('map-container'), {'center': centerCoords, 'zoom': 9.0});
+						
+						var locationMarkerImage = {'url': 'assets/Red_X.svg',
+												   'scaledSize': new google.maps.Size(25, 25),
+												   'anchor': new google.maps.Point(12.5, 12.5)};
+						
+						var locationMarker = new google.maps.Marker({
+							'position': centerCoords,
+							'map': shelterMap,
+							'icon': locationMarkerImage
+						});
+						
+						var shelterTable = document.getElementById('shelter-table');
+						
+						var dispProperties = {'Address': 'address', 'City': 'city', 'State': 'state_abbr', 'Name': 'name', 'Latitude': 'latitude',
+												'Longitude': 'longitude', 'Contact Phone Number': 'contact_phone'};
+						
+						var headerString = '<tr>';
+						
+						for(var currentName in dispProperties)
+						{
+							headerString += ('<th>' + currentName + '</th>');
+						}
+						
+						headerString += '</tr>';
+						$(shelterTable).append(headerString);
+						
+						resultData.forEach(function(currentValue) {
+							var shelterMarker = new google.maps.Marker({
+								'position': {'lat': parseFloat(currentValue['latitude']), 'lng': parseFloat(currentValue['longitude'])},
+								'map': shelterMap
+							});
+							
+							var rowString = '<tr>';
+							
+							for(var currentName in dispProperties)
+							{
+								rowString += ('<td>' + currentValue[dispProperties[currentName]] + '</td>');
+							}
+							
+							rowString += '</tr>';
+							$(shelterTable).append(rowString);
+						});
+						
+						
+					}, 'json');
+				});
+			}
+		</script>
+	</head>
+	<body>
+		<h1>Shelter Map</h1>
+		<div id="map-container"></div>
+		<h1>Shelter Information</h1>
+		<table id="shelter-table"></table>
+	</body>
+</html>
+	

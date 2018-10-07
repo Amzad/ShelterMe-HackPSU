@@ -49,4 +49,16 @@
 		
 		return $accuweatherResponse->body;
 	}
+	
+	function getAlertType(object $alertObj)
+	{
+		if(mb_stristr($alertObj['Area']['Name'], 'hurricane', FALSE, 'utf-8'))
+		{
+			return 'hurricane';
+		}
+		else
+		{
+			return 'unknown';
+		}
+	}
 ?>
