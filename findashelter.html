@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+		<head>
+		<script src="http://code.jquery.com/jquery-3.1.1.js"></script>
+		<style type="text/css">
+#map-container {
+	width: 80pvw;
+	height: 500px;
+}
+</style>
+		<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+		<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBMU7wa58cLNCw0YLR9IpY5L1rf3QzHZsU&callback=mapAPILoaded"
+        async defer></script>
+		<script type="text/javascript">
+			
+			function degreesToRadians(degrees) {
+  				return degrees * Math.PI / 180;
+			}
+			
+			function distanceInMIBetweenEarthCoordinates(lat1, lon1, lat2, lon2) {
+  								var earthRadiusMi = 3959.0;			
+  								var dLat = degreesToRadians(lat2-lat1);
+  								var dLon = degreesToRadians(lon2-lon1);
+								
+  								lat1 = degreesToRadians(lat1);
+  								lat2 = degreesToRadians(lat2);
+
+  							var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          					Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2); 
+  							var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  							return earthRadiusMi * c;
+								}
+			
+			function mapAPILoaded()
+			{
+				$(function(){
+					// var centerCoords = {'lat': 40.806407, 'lng': -73.947024};
+					// var latc = 40.806407;
+					// var lngc = -73.947024;
+					$.get('backend/get_active_location.php', {}, function(resultStr) {
+						var gCoder = new google.maps.Geocoder();
+						gCoder.geocode({'address': resultStr}, function(results, status) {
+					        var centerCoords = {'lat': results[0]['geometry']['location'].lat(), 'lng': results[0]['geometry']['location'].lng()};
+							$.get('backend/get_shelters.php', {'latitude': centerCoords.lat, 'longitude': centerCoords.lng}, function(resultData) {
+								var shelterMap = new google.maps.Map(document.getElementById('map-container'), {'center': centerCoords, 'zoom': 9.0});
+								
+								var locationMarkerImage = {'url': 'assets/Orange_X.svg',
+														   'scaledSize': new google.maps.Size(25, 25),
+														   'anchor': new google.maps.Point(12.5, 12.5)};
+								
+								var locationMarker = new google.maps.Marker({
+									'position': centerCoords,
+									'map': shelterMap,
+									'icon': locationMarkerImage,
+									'z-index': 1000
+								});
+								
+								var shelterTable = document.getElementById('shelter-table');
+								
+								
+								var dispProperties = {'Approximate Distance (mi.)': 'distance', 'Name': 'name', 'Address': 'address', 'City': 'city', 'Phone Number': 'contact_phone'};
+								
+								resultData.forEach(function(currentValue) {
+									currentValue['distance'] = distanceInMIBetweenEarthCoordinates(centerCoords.lat, centerCoords.lng, parseFloat(currentValue['latitude']), parseFloat(currentValue['longitude']));
+								});
+								
+								resultData.sort(function(firstValue, secondValue) {
+									return (firstValue['distance'] - secondValue['distance']);
+								});
+								
+								resultData.forEach(function(currentValue) {
+									currentValue['distance'] = currentValue['distance'].toPrecision(3);
+								});
+								
+								var headerString = '<tr>';
+								
+								for(var currentName in dispProperties)
+								{
+									headerString += ('<th>' + currentName + '</th>');
+								}
+								
+								headerString += '</tr>';
+								$(shelterTable).append(headerString);
+								
+								resultData.forEach(function(currentValue) {
+									//var distance = latc - parseFloat(currentValue['latitude']);
+									//var distance2 = lngc - parseFloat(currentValue['longitude']);
+									//console.log(distance;)
+									
+									
+									var shelterMarker = new google.maps.Marker({
+										'position': {'lat': parseFloat(currentValue['latitude']), 'lng': parseFloat(currentValue['longitude'])},
+										'map': shelterMap,
+										'z-index': 1
+									});
+									
+									var rowString = '<tr>';
+									
+									for(var currentName in dispProperties)
+									{
+										rowString += ('<td>' + currentValue[dispProperties[currentName]] + '</td>');
+									}
+									
+									rowString += '</tr>';
+									$(shelterTable).append(rowString);
+								});
+							}, 'json');
+						});
+					}, 'text');
+				});
+			}
+		</script>
+		<!-- Required meta tags -->
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+		<!-- Bootstrap CSS -->
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+		<title>ShelterMe!</title>
+		</head>
+		<body>
+<!-- Nav Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark"> <a class="navbar-brand" href="#">ShelterMe! - Find A Shelter</a>
+          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation"> <span class="navbar-toggler-icon"></span> </button>
+          <div class="collapse navbar-collapse" id="navbarNavDropdown">
+    <ul class="navbar-nav">
+              <li class="nav-item"> <a class="nav-link" href="index.html">Home </a> </li>
+              <li class="nav-item active"> <a class="nav-link" href="findashelter.html">Find A Shelter<span class="sr-only">(current)</span></a> </li>
+              <li class="nav-item"> <a class="nav-link" href="tips.html">Tips</a> </li>
+            </ul>
+  </div>
+        </nav>
+
+<!-- Main Body -->
+<div class="container" style="min-height: 90vh">
+          <div class="container-fluid"> <br>
+    <div id="alertbar" class="alert alert-danger d-none" role="alert"><span id="alertTitle"></span><br>
+              <span id="alertSummary"></span></div>
+    <div id="forecast" class="fluid">
+              <h4>Find A Shelter Near You!</h4>
+              <br>
+              <div id="map-container"></div>
+              <h4>Shelter Information</h4>
+              <table class="table table-hover" id="shelter-table">
+        <thead>
+                  <tr>
+            <!--<th scope="col">Distance</th>
+            <th scope="col">Name</th>
+            <th scope="col">Address</th>
+			<th scope="col">City</th>
+            <th scope="col">Phone Number</th>
+            <th scope="col"></th> -->
+          </tr>
+                </thead>
+        <tbody>
+                </tbody>
+      </table>
+            </div>
+    <!-- End Forecast --> 
+  </div>
+        </div>
+<div class="footer">
+          <footer class="navbar navbar-expand-lg navbar-dark bg-dark text-white" style="height: 40px; position: static; bottom: 0"> <a class="" style="line-height: 40px">© 2018 ShelterMe!</a> </footer>
+        </div>
+<!-- Optional JavaScript --> 
+<!-- jQuery first, then Popper.js, then Bootstrap JS --> 
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script> 
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+</body>
+</html>

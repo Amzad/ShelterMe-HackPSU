@@ -25,4 +25,36 @@
 		
 		return $resultSet;
 	}
+	
+	function getSessionUID()
+	{
+		return 0;
+	}
+	
+	function getActivePostalCode($uid)
+	{
+		$dbConnection = openDBConnection();
+		
+		$activePostalCodeQuery = $dbConnection->prepare('SELECT postal_code FROM weatherapp.locations WHERE (user_id = :uid AND active = 1) LIMIT 1');
+		$activePostalCodeQuery->execute(array(':uid' => $uid));
+		
+		$resultRow = $activePostalCodeQuery->fetch();
+		
+		$dbConnection = null;
+		$activePostalCodeQuery = null;
+		
+		return $resultRow['postal_code'];
+	}
+	
+	function addPostalCode($uid, $postalCode)
+	{
+		$dbConnection = openDBConnection();
+		
+		// One postal code at a time for now
+		$addPostalCodeQuery = $dbConnection->prepare('UPDATE weatherapp.locations SET postal_code = :postalCode WHERE user_id = :uid;');
+		$addPostalCodeQuery->execute(array(':uid' => $uid, ':postalCode' => $postalCode));
+		
+		$dbConnection = null;
+		$addPostalCodeQuery = null;
+	}
 ?>

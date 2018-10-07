@@ -1,0 +1,517 @@
+<!doctype html>
+<html>
+    <head>
+    <script src="http://code.jquery.com/jquery-3.1.1.js"></script>
+    <script type="text/javascript">		
+
+        // Configure our weather widget during jQuery.OnReady
+        $(function () {
+
+            var isMetric = false;
+            var locationUrl = "";
+            var currentConditionsUrl = "";
+			var defaultLocation = "3706_PC";
+
+            // Visit http://apidev.accuweather.com/developers/languages for a list of supported languages
+            var language = "en";
+
+            // Contact AccuWeather to get an official key. They key in this
+            // example is temporary and should NOT be used it in production.
+            var apiKey = "HackPSU2018"; 
+	
+
+            var awxClearMessages = function() {
+                $("#awxLocationInfo").html("...");
+                $("#awxLocationUrl").html("...");
+                $("#awxWeatherInfo").html("...");
+                $("#awxWeatherUrl").html("...")
+            }
+
+			
+            var awxCityLookUp = function (freeText, setActive) {
+                awxClearMessages();
+                locationUrl = "http://dataservice.accuweather.com/locations/v1/postalcodes/search?q=" + freeText + "&apikey=" + apiKey;
+                $.ajax({
+                    type: "GET",
+                    url: locationUrl,
+                    // dataType: "jsonp",
+                    cache: false,                    // Use cache for better reponse times
+                    // jsonpCallback: "awxCallback",   // Prevent unique callback name for better reponse times
+                    success: function (data) { 
+						awxCityLookUpFound(data);
+						
+						if(setActive)
+						{
+							$.get('backend/add_location.php', {'postalcode': freeText});
+						}
+					}
+					
+                });
+            };
+			
+
+            // Displays what location(s) were found.
+            var awxCityLookUpFound = function (data) {
+                var msg, locationKey = null;
+
+                $("#awxLocationUrl").html("<a href=" + encodeURI(locationUrl) + ">" + locationUrl + "</a>");
+                if (data.length == 1) {
+                    locationKey = data[0].Key;
+                    msg = "Location: " + data[0].LocalizedName + ", " + data[0].AdministrativeArea.LocalizedName;
+                }
+                else if(data.length == 0) {
+                    msg = "No locations found."
+                }
+                else {
+                    locationKey = data[0].Key;
+                    msg = "Location: " + data[0].LocalizedName + ", " + data[0].AdministrativeArea.LocalizedName;
+                }
+
+                $("#locationname").html(msg);
+                if(locationKey != null) {
+					awxGetWeatherConditions(locationKey);
+                    awxGetCurrentConditions(locationKey);
+                }
+                    
+            };
+			
+			var awxGetWeatherConditions = function (locationKey) {
+                currentConditionsUrl = "http://dataservice.accuweather.com/alerts/v1/" + 
+                    locationKey + ".json?language=" + language + "&details=true" + "&apikey=" + apiKey;
+                $.ajax({
+                    type: "GET",
+                    url: currentConditionsUrl,
+                    // dataType: "jsonp",
+                    cache: false,                    // Use cache for better reponse times
+                    // jsonpCallback: "awxCallback",   // Prevent unique callback name for better reponse times
+                    success: function (data) {
+                            var html;
+							var html2;
+                            if(data && data.length > 0) {
+                                var conditions = data[0];
+                                //var temp = conditions.Temperature.Imperial;
+                                html = "Alert: " + conditions.Description.Localized;
+								if (conditions.Area.Summary == null) {
+									html2 = "Unavailable";
+								}
+								else {
+									html2 = "Summary: " + conditions.Area.Summary;
+								}
+								
+								var object = document.getElementById("alertbar");
+								object.classList.remove("d-none");
+								console.log("Running");
+
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								var object = document.getElementById("alertbar");
+								object.classList.add("d-none");
+                            }
+                        $("#alertTitle").html(html);
+                        $("#alertSummary").html(html2);
+                    }
+                });
+            };
+
+            // Gets 5 hour forecast for the current location
+            var awxGetCurrentConditions = function (locationKey) {
+
+                currentConditionsUrl = "http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/" + 
+                    locationKey + ".json?language=" + language + "&apikey=" + apiKey;
+                $.ajax({
+                    type: "GET",
+                    url: currentConditionsUrl,
+                    // dataType: "jsonp",
+                    cache: false,                    // Use cache for better reponse times
+                    // jsonpCallback: "awxCallback",   // Prevent unique callback name for better reponse times
+                    success: function (data) {
+                            var html;
+							var html2;
+							var html3;
+                            if(data && data.length > 0) {
+                                var conditions = data[0];
+                                //var temp = conditions.Temperature.Imperial;
+                                html = "Temp: " + conditions.Temperature.Value + "° " + conditions.Temperature.Unit;
+								//if (conditions.Wind.Speed == null) {
+								//	html2 = "Weather: " + " " + conditions.WeatherIcon;
+								//}
+								//else {
+									html2 = "Weather: " + conditions.IconPhrase;	
+								//}
+								
+								html3 = "Precipitation: " + conditions.PrecipitationProbability +"%";
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								html3 = "Unavailable";
+                            }
+                        $("#1hrtemp").html(html);
+                        $("#1hrwind").html(html2);
+                        $("#1hrrain").html(html3);
+						// CELL 2 /////////////////
+						var html;
+							var html2;
+							var html3;
+                            if(data && data.length > 0) {
+                                var conditions = data[1];
+                                //var temp = conditions.Temperature.Imperial;
+                                html = "Temp: " + conditions.Temperature.Value + "° " + conditions.Temperature.Unit;
+								//if (conditions.Wind.Speed == null) {
+								//	html2 = "Weather: " + " " + conditions.WeatherIcon;
+								//}
+								//else {
+									html2 = "Weather: " + conditions.IconPhrase;	
+								//}
+								
+								html3 = "Precipitation: " + conditions.PrecipitationProbability + "%";
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								html3 = "Unavailable";
+                            }
+                        $("#2hrtemp").html(html);
+                        $("#2hrwind").html(html2);
+                        $("#2hrrain").html(html3);
+                        
+						// CELL 3
+						var html;
+							var html2;
+							var html3;
+                            if(data && data.length > 0) {
+                                var conditions = data[2];
+                                //var temp = conditions.Temperature.Imperial;
+                                html = "Temp: " + conditions.Temperature.Value + "° " + conditions.Temperature.Unit;
+								//if (conditions.Wind.Speed == null) {
+								//	html2 = "Weather: " + " " + conditions.WeatherIcon;
+								//}
+								//else {
+									html2 = "Weather: " + conditions.IconPhrase;	
+								//}
+								
+								html3 = "Precipitation: " + conditions.PrecipitationProbability +"%";
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								html3 = "Unavailable";
+                            }
+                        $("#3hrtemp").html(html);
+                        $("#3hrwind").html(html2);
+                        $("#3hrrain").html(html3);
+						
+						// CELL 4 /////////////////
+						var html;
+							var html2;
+							var html3;
+                            if(data && data.length > 0) {
+                                var conditions = data[3];
+                                //var temp = conditions.Temperature.Imperial;
+                                html = "Temp: " + conditions.Temperature.Value + "° " + conditions.Temperature.Unit;
+								//if (conditions.Wind.Speed == null) {
+								//	html2 = "Weather: " + " " + conditions.WeatherIcon;
+								//}
+								//else {
+									html2 = "Weather: " + conditions.IconPhrase;	
+								//}
+								
+								html3 = "Precipitation: " + conditions.PrecipitationProbability + "%";
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								html3 = "Unavailable";
+                            }
+                        $("#4hrtemp").html(html);
+                        $("#4hrwind").html(html2);
+                        $("#4hrrain").html(html3);
+                        
+						// CELL 5 /////////////////
+						var html;
+							var html2;
+							var html3;
+                            if(data && data.length > 0) {
+                                var conditions = data[4];
+                                //var temp = conditions.Temperature.Imperial;
+                                html = "Temp: " + conditions.Temperature.Value + "° " + conditions.Temperature.Unit;
+								html2 = "Weather: " + conditions.IconPhrase;	
+								
+								html3 = "Precipitation: " + conditions.PrecipitationProbability + "%";
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								html3 = "Unavailable";
+                            }
+                        $("#5hrtemp").html(html);
+                        $("#5hrwind").html(html2);
+                        $("#5hrrain").html(html3);
+                        
+                    }
+                });
+            };
+			
+			var defaultGetCurrentConditions = function (defaultLocation) {
+                currentConditionsUrl = "http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/" + 
+                    defaultLocation + ".json?language=" + language + "&apikey=" + apiKey;
+                $.ajax({
+                    type: "GET",
+                    url: currentConditionsUrl,
+                    // dataType: "jsonp",
+                    cache: false,                    // Use cache for better reponse times
+                    // jsonpCallback: "awxCallback",   // Prevent unique callback name for better reponse times
+                    success: function (data) {
+                            var html;
+							var html2;
+							var html3;
+                            if(data && data.length > 0) {
+                                var conditions = data[0];
+                                html = "Temp: " + conditions.Temperature.Value + "° " + conditions.Temperature.Unit;
+									html2 = "Weather: " + conditions.IconPhrase;	
+								html3 = "Precipitation: " + conditions.PrecipitationProbability +"%";
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								html3 = "Unavailable";
+                            }
+                        $("#1hrtemp").html(html);
+                        $("#1hrwind").html(html2);
+                        $("#1hrrain").html(html3);
+						// CELL 2 /////////////////
+						var html;
+							var html2;
+							var html3;
+                            if(data && data.length > 0) {
+                                var conditions = data[1];
+                                //var temp = conditions.Temperature.Imperial;
+                                html = "Temp: " + conditions.Temperature.Value + "° " + conditions.Temperature.Unit;
+								//if (conditions.Wind.Speed == null) {
+								//	html2 = "Weather: " + " " + conditions.WeatherIcon;
+								//}
+								//else {
+									html2 = "Weather: " + conditions.IconPhrase;	
+								//}
+								
+								html3 = "Precipitation: " + conditions.PrecipitationProbability + "%";
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								html3 = "Unavailable";
+                            }
+                        $("#2hrtemp").html(html);
+                        $("#2hrwind").html(html2);
+                        $("#2hrrain").html(html3);
+                        
+						// CELL 3
+						var html;
+							var html2;
+							var html3;
+                            if(data && data.length > 0) {
+                                var conditions = data[2];
+                                //var temp = conditions.Temperature.Imperial;
+                                html = "Temp: " + conditions.Temperature.Value + "° " + conditions.Temperature.Unit;
+								//if (conditions.Wind.Speed == null) {
+								//	html2 = "Weather: " + " " + conditions.WeatherIcon;
+								//}
+								//else {
+									html2 = "Weather: " + conditions.IconPhrase;	
+								//}
+								
+								html3 = "Precipitation: " + conditions.PrecipitationProbability +"%";
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								html3 = "Unavailable";
+                            }
+                        $("#3hrtemp").html(html);
+                        $("#3hrwind").html(html2);
+                        $("#3hrrain").html(html3);
+						
+						// CELL 4 /////////////////
+						var html;
+							var html2;
+							var html3;
+                            if(data && data.length > 0) {
+                                var conditions = data[3];
+                                //var temp = conditions.Temperature.Imperial;
+                                html = "Temp: " + conditions.Temperature.Value + "° " + conditions.Temperature.Unit;
+								//if (conditions.Wind.Speed == null) {
+								//	html2 = "Weather: " + " " + conditions.WeatherIcon;
+								//}
+								//else {
+									html2 = "Weather: " + conditions.IconPhrase;	
+								//}
+								
+								html3 = "Precipitation: " + conditions.PrecipitationProbability + "%";
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								html3 = "Unavailable";
+                            }
+                        $("#4hrtemp").html(html);
+                        $("#4hrwind").html(html2);
+                        $("#4hrrain").html(html3);
+                        
+						// CELL 5 /////////////////
+						var html;
+							var html2;
+							var html3;
+                            if(data && data.length > 0) {
+                                var conditions = data[4];
+                                //var temp = conditions.Temperature.Imperial;
+                                html = "Temp: " + conditions.Temperature.Value + "° " + conditions.Temperature.Unit;
+								//if (conditions.Wind.Speed == null) {
+								//	html2 = "Weather: " + " " + conditions.WeatherIcon;
+								//}
+								//else {
+									html2 = "Weather: " + conditions.IconPhrase;	
+								//}
+								
+								html3 = "Precipitation: " + conditions.PrecipitationProbability + "%";
+                            }
+                            else {
+                                html = "Unavailable";
+								html2 = "Unavailable";
+								html3 = "Unavailable";
+                            }
+                        $("#5hrtemp").html(html);
+                        $("#5hrwind").html(html2);
+                        $("#5hrrain").html(html3);
+                        
+                    }
+                });
+            };
+			
+
+            $("#awxSearchTextBox").keypress(function (e) {
+                if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {
+                    var text = $("#awxSearchTextBox").val();
+                    awxCityLookUp(text, true);
+                    return false;
+                } else {
+                    return true;
+                }
+            });
+
+            $("#awxSearchButton").click(function () {
+                var text = $("#awxSearchTextBox").val();
+                awxCityLookUp(text, true);
+            });
+			
+			$(document).ready ( function(){
+				$.get('backend/get_active_location.php', {}, function(resultStr) {
+					awxCityLookUp(resultStr, false);
+				}, 'text');
+				
+				// defaultGetCurrentConditions("3706_PC");
+			});
+			
+        });	
+		 
+    </script>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <title>ShelterMe!</title>
+    </head>
+    <body>
+<!-- Nav Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark"> <a class="navbar-brand" href="#">ShelterMe!</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation"> <span class="navbar-toggler-icon"></span> </button>
+      <div class="collapse navbar-collapse" id="navbarNavDropdown">
+    <ul class="navbar-nav">
+          <li class="nav-item active"> <a class="nav-link" href="index.html">Home <span class="sr-only">(current)</span></a> </li>
+          <li class="nav-item"> <a class="nav-link" href="findashelter.html">Find A Shelter</a> </li>
+          <li class="nav-item"> <a class="nav-link" href="tips.html">Tips</a> </li>
+        </ul>
+  </div>
+    </nav>
+
+<!-- Main Body -->
+<div class="container" style="min-height: 90vh">
+      <div class="container-fluid"> <br>
+    <div id="alertbar" class="alert alert-danger d-none" role="alert"><span id="alertTitle"></span><br>
+          <span id="alertSummary"></span></div>
+    <div id="forecast" class="fluid">
+          <div class="col-lg-6">
+        <div class="input-group">
+              <input type="text" id="awxSearchTextBox" class="form-control" placeholder="Enter your zip code">
+              <br>
+              <span class="input-group-btn">
+          <button class="btn btn-default" type="button" id="awxSearchButton" value="Search">Set Location</button>
+          <br>
+          <br>
+          </span> </div>
+        <!-- /input-group --> 
+        <span id="locationname">Location: New York, New York </span> <br>
+        <br>
+      </div>
+          <div class="container-fluid"> 
+        
+        <!-- Repeating Cells -->
+        <div class="row">
+              <div class="card" style="width: 11rem; margin-right: 10px; margin-bottom: 10px"> <span class="card-header" id="1hrtitle"> 1 Hour </span>
+            <ul class="list-group list-group-flush list-unstyled">
+                  <li><span id="1hrtemp" class="list-group-item">Temp:</span></li>
+                  <li><span id="1hrwind" class="list-group-item">Wind:</span></li>
+                  <li><span id="1hrrain" class="list-group-item">Rain:</span></li>
+                </ul>
+          </div>
+              <div class="card" style="width: 11rem; margin-right: 10px; margin-bottom: 10px">
+            <div class="card-header" id="2hrtitle"> 2 Hour </div>
+            <ul class="list-group list-group-flush list-unstyled">
+                  <li><span id="2hrtemp" class="list-group-item">Temp:</span></li>
+                  <li><span id="2hrwind" class="list-group-item">Wind:</span></li>
+                  <li><span id="2hrrain" class="list-group-item">Rain:</span></li>
+                </ul>
+          </div>
+              <div class="card" style="width: 11rem; margin-right: 10px; margin-bottom: 10px">
+            <div class="card-header" id="3hrtitle"> 3 Hour </div>
+            <ul class="list-group list-group-flush list-unstyled">
+                  <li><span id="3hrtemp" class="list-group-item">Temp:</span></li>
+                  <li><span id="3hrwind" class="list-group-item">Wind:</span></li>
+                  <li><span id="3hrrain" class="list-group-item">Rain:</span></li>
+                </ul>
+          </div>
+              <div class="card" style="width: 11rem; margin-right: 10px; margin-bottom: 10px">
+            <div class="card-header" id="4hrtitle"> 4 Hour </div>
+            <ul class="list-group list-group-flush list-unstyled">
+                  <li><span id="4hrtemp" class="list-group-item">Temp:</span></li>
+                  <li><span id="4hrwind" class="list-group-item">Wind:</span></li>
+                  <li><span id="4hrrain" class="list-group-item">Rain:</span></li>
+                </ul>
+          </div>
+              <div class="card" style="width: 11rem; margin-right: 10px; margin-bottom: 10px">
+            <div class="card-header" id="5hrtitle"> 5 Hour </div>
+            <ul class="list-group list-group-flush list-unstyled">
+                  <li><span id="5hrtemp" class="list-group-item">Temp:</span></li>
+                  <li><span id="5hrwind" class="list-group-item">Wind:</span></li>
+                  <li><span id="5hrrain" class="list-group-item">Rain:</span></li>
+                </ul>
+          </div>
+            </div>
+      </div>
+        </div>
+    <!-- End Forecast --> 
+  </div>
+    </div>
+<div class="footer">
+      <footer class="navbar navbar-expand-lg navbar-dark bg-dark text-white" style="height: 40px; position: static; bottom: 0"> <a class="" style="line-height: 40px">© 2018 ShelterMe!</a> </footer>
+    </div>
+<!-- Optional JavaScript --> 
+<!-- jQuery first, then Popper.js, then Bootstrap JS --> 
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script> 
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+</body>
+</html>
